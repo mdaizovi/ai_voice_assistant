@@ -3,47 +3,25 @@ import os
 import requests
 import urllib.request
 
-from twilio.rest import Client
 from pydub import AudioSegment
 
 from settings import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+SEP = os.path.sep
 
-AUDIO_IN_DIR = settings.AUDIO_IN_DIR
-AUDIO_OUT_DIR = settings.AUDIO_OUT_DIR
-
-# Find your Account SID and Auth Token at twilio.com/console
-# and set the environment variables. See http://twil.io/secure
-twilio_number = settings.TWILIO_NUMBER
-account_sid = settings.TWILIO_ACCOUNT_SID
-auth_token = settings.TWILIO_AUTH_TOKEN
-twilio_client = Client(account_sid, auth_token)
-
-# TODO rewrite twilio_client as deps
-# Sending message logic through Twilio Messaging API
-def send_echo_message(to_number, body_text):
-    try:
-        message = twilio_client.messages.create(
-            from_=f"whatsapp:{twilio_number}",
-            body=body_text,
-            to=f"whatsapp:{to_number}"
-            )
-        logger.info(f"Message sent to {to_number}: {message.body}")
-    except Exception as e:
-        logger.error(f"Error sending message to {to_number}: {e}")
-
-def ogg2mp3(audio_url):
-        media_filename = audio_url.split('/')[-1]
+#TODO Split this into putting in S3 bucket and converting before or after.
+def convert_audio(audio_url, from_extension="ogg", to_extension="mp3"):
+        media_filename = audio_url.split(SEP)[-1]
         response = requests.get(audio_url)
         url = response.url
         # Download the OGG file
-        input_filename = f"{AUDIO_IN_DIR}/{media_filename}.ogg" 
+        input_filename = f"{settings.AUDIO_IN_DIR}{SEP}{media_filename}.{from_extension}" 
         urllib.request.urlretrieve(url, input_filename)
         # Load the OGG file
         audio_file = AudioSegment.from_ogg(input_filename)
         # Export the file as MP3
-        input_filename = f"{AUDIO_OUT_DIR}/{media_filename}.mp3" 
-        audio_file.export(input_filename, format="mp3")
+        input_filename = f"{settings.AUDIO_OUT_DIR}{SEP}{media_filename}.{to_extension}" 
+        audio_file.export(input_filename, format=to_extension)
         return os.path.join(input_filename)
