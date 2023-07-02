@@ -14,4 +14,4 @@ db.sqlite3
 .env.backup
 .session
 /venv
-src/data/
+src/app/data/

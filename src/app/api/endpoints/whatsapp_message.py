@@ -1,28 +1,23 @@
 # Third-party imports
 import openai
-from fastapi import FastAPI, Request
-from decouple import config
-from sqlalchemy.orm import Session
+
+from fastapi import APIRouter, Request
 
 # Internal imports
-from utils import send_message, logger, ogg2mp3
+from utils import send_message, ogg2mp3
+from settings import settings
 
-openai.api_key = config("OPENAI_API_KEY")
-app = FastAPI()
+router = APIRouter()
+#TODO rewrite as deps
+openai.api_key = settings.OPENAI_API_KEY
 
 
-@app.post("/message/whatsapp")
-async def reply(request: Request):
-    # Await for the incoming webhook request to extract information
-    # like phone number and the media URL of the voice note
+@router.post("/message/whatsapp")
+async def whatsapp_message(request: Request):
     form_data = await request.form()
     whatsapp_number = form_data['From'].split("whatsapp:")[-1]
-    body = form_data['Body']
-    print(f"body {body}")
 
     media_url = form_data['MediaUrl0']
-    media_type = form_data['MediaContentType0']
-    print(f"Media URL: {media_url}\nMedia Content type: {media_type}")
 
     # Convert the OGG audio to MP3 using ogg2mp3() function
     mp3_file_path = ogg2mp3(media_url)
@@ -35,10 +30,6 @@ async def reply(request: Request):
             language="en",
             temperature=0.5,
         )
-        print(f"""
-        Transcribed the voice note to the following text: {whisper_response}.
-            Now it's being sent to ChatGPT API to reply...
-        """)
 
     text = whisper_response.get("text")
     chat_response = f"I think you said: {text}"
