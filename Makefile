@@ -13,4 +13,4 @@ setup:
 	pre-commit install
 
 run:
-	cd src && poetry run uvicorn app.main:app --reload --port ${SERVER_PORT}
+	cd src/app && poetry run uvicorn main:app --reload
