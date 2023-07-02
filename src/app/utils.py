@@ -19,13 +19,13 @@ AUDIO_OUT_DIR = settings.AUDIO_OUT_DIR
 twilio_number = settings.TWILIO_NUMBER
 account_sid = settings.TWILIO_ACCOUNT_SID
 auth_token = settings.TWILIO_AUTH_TOKEN
-client = Client(account_sid, auth_token)
+twilio_client = Client(account_sid, auth_token)
 
-
+# TODO rewrite twilio_client as deps
 # Sending message logic through Twilio Messaging API
-def send_message(to_number, body_text):
+def send_echo_message(to_number, body_text):
     try:
-        message = client.messages.create(
+        message = twilio_client.messages.create(
             from_=f"whatsapp:{twilio_number}",
             body=body_text,
             to=f"whatsapp:{to_number}"
