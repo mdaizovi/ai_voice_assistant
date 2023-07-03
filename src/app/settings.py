@@ -17,4 +17,5 @@ class Settings(BaseSettings):
     LEX2_BOT_ID = config("LEX2_BOT_ID")
     LEX2_BOT_ALIAS_ID = config("LEX2_BOT_ALIAS_ID")
 
+
 settings = Settings()

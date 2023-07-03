@@ -16,34 +16,27 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# get_session
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lexv2-runtime/client/get_session.html
-
+# TODO: change to
 # recognize_utterance - can be text or speech
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lexv2-runtime/client/recognize_utterance.html
-
-# recognize_text
-# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/lexv2-runtime/client/recognize_text.html
 
 
 @router.post("/message/whatsapp")
 async def whatsapp_message(
     request: Request,
     twilio_client: TwilioClient = Depends(get_twilio_client),
+    boto3_client=Depends(get_lex_client),
     openai=Depends(get_openai),
 ):
     form_data = await request.form()
-    #TODO I guess i can keep track of convrsation by whatsapp_number
+    # TODO I guess i can keep track of convrsation by whatsapp_number
     # Can I connect lex session id to that?
     whatsapp_user_number = form_data["From"].split("whatsapp:")[-1]
-    whatsapp_session_id = form_data["From"]
-    print(f"whatsapp_session_id  {whatsapp_session_id }")
-    
-    body = form_data["Body"]
-    input_type = _get_input_type(input=form_data["Body"])
+    whatsapp_session_id = _build_session_from_whatsapp_from_value(form_data["From"])
+    input_type = _get_input_type(form_data=form_data)
 
     if input_type == WhatsappInputType.TEXT:
-        text = body
+        text = form_data["Body"]
     elif input_type == WhatsappInputType.AUDIO:
         # No body means it's an audio message (well could be img but lets not worry about that)
         # TODO convert audio with AWS, not locally.
@@ -51,16 +44,25 @@ async def whatsapp_message(
         media_url = form_data["MediaUrl0"]
         text = _get_text_from_audio_url(openai, media_url)
 
-    #TODO placeholder, does nothing
-    _send_input_to_lex2()
-
-    # TODO currently only sends text
-    _send_whatsapp_response(twilio_client, whatsapp_user_number, text)
+    lex_response = _send_input_to_lex2(
+        boto3_client=boto3_client, session_id=whatsapp_session_id, text=text
+    )
+    try:
+        response_text = lex_response["messages"][0]["content"]
+        _send_whatsapp_message(
+            twilio_client=twilio_client,
+            to_number=whatsapp_user_number,
+            body_text=response_text,
+        )
+    except KeyError:
+        # This is when Lex doesn't send messages bc it's done.
+        # maybe if we add a finsihed message won't get KeyError?
+        pass
 
     return
 
 
-def _send_echo_message(twilio_client, to_number, body_text):
+def _send_whatsapp_message(twilio_client, to_number, body_text):
     twilio_number = settings.TWILIO_NUMBER
     try:
         message = twilio_client.messages.create(
@@ -83,46 +85,32 @@ def _get_text_from_audio_url(openai, media_url):
         )
     return whisper_response.get("text")
 
+
+def _build_session_from_whatsapp_from_value(from_value):
+    return from_value.replace("+", "")
+
+
 def _get_language():
-    #TODO get it from user input
+    # TODO get it from user input
     return "en_US"
 
-def _send_input_to_lex2():
-    """
-    The following request fields must be compressed with gzip 
-    and then base64 encoded before you send them to Amazon Lex V2.
-        - requestAttributes
-        - sessionState
-    The following response fields are compressed using gzip 
-    and then base64 encoded by Amazon Lex V2. 
-    Before you can use these fields, you must decode and decompress them.
-        - inputTranscript
-        - interpretations
-        - messages
-        - requestAttributes
-        - sessionState
-    """
-#     LOCALE_ID = _get_language()
-#     response = client.recognize_text(
-#     botId=botId,
-#     botAliasId=botAliasId,
-#     localeId=localeId,
-#     sessionId=sessionId,
-#     text='Book hotel')
 
-# send to user 
-# response['messages'][0]['content']
+def _send_input_to_lex2(boto3_client, session_id, text):
+    LOCALE_ID = _get_language()
+    # TODO handle both text and audio
+    return boto3_client.recognize_text(
+        botId=settings.LEX2_BOT_ID,
+        botAliasId=settings.LEX2_BOT_ALIAS_ID,
+        localeId=LOCALE_ID,
+        sessionId=session_id,
+        text=text,
+    )
 
 
-def _send_whatsapp_response(twilio_client, whatsapp_number, text):
-    chat_response = f"I think you said: {text}"
-    _send_echo_message(
-        twilio_client, to_number=whatsapp_number, body_text=chat_response
-    ) 
-    
-def _get_input_type(input):
-    if (isinstance(input, str)):
+def _get_input_type(form_data):
+    body = form_data["Body"]
+    if body != "":
         return WhatsappInputType.TEXT
     else:
+        # ('MediaContentType0', 'audio/ogg'),  ('NumMedia', '1'),  ('Body', '')
         return WhatsappInputType.AUDIO
-

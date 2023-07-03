@@ -15,7 +15,10 @@ async def get_openai() -> openai:
     openai.api_key = settings.OPENAI_API_KEY
     return openai
 
+
 async def get_lex_client():
     # do I need aws_access_key_id and aws_secret_access_key ?
-    client = boto3.client('lexv2-runtime', region = "eu-central-1")
+    # yes, this only works loclaly bc
+    # INFO:botocore.credentials:Found credentials in shared credentials file: ~/.aws/credentials
+    client = boto3.client("lexv2-runtime", region_name="eu-central-1")
     return client
