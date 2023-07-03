@@ -14,5 +14,7 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN")
     TWILIO_NUMBER = config("TWILIO_NUMBER")
 
+    LEX2_BOT_ID = config("LEX2_BOT_ID")
+    LEX2_BOT_ALIAS_ID = config("LEX2_BOT_ALIAS_ID")
 
 settings = Settings()

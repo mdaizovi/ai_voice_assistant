@@ -17,6 +17,7 @@ python-multipart = "^0.0.6"
 pyngrok = "^6.0.0"
 pydub = "^0.25.1"
 requests = "^2.31.0"
+boto3 = "^1.26.165"
 
 
 [build-system]
