@@ -33,20 +33,19 @@ async def whatsapp_message(
     # Can I connect lex session id to that?
     whatsapp_user_number = form_data["From"].split("whatsapp:")[-1]
     whatsapp_session_id = _build_session_from_whatsapp_from_value(form_data["From"])
-    input_type = _get_input_type(form_data=form_data)
 
+    ###################### Rewrite to allow for audio
+    input_type = _get_input_type(form_data=form_data)
     if input_type == WhatsappInputType.TEXT:
         text = form_data["Body"]
     elif input_type == WhatsappInputType.AUDIO:
-        # No body means it's an audio message (well could be img but lets not worry about that)
-        # TODO convert audio with AWS, not locally.
-        # or can i jsut send to AWS?
         media_url = form_data["MediaUrl0"]
         text = _get_text_from_audio_url(openai, media_url)
-
     lex_response = _send_input_to_lex2(
         boto3_client=boto3_client, session_id=whatsapp_session_id, text=text
     )
+    ########################
+
     try:
         response_text = lex_response["messages"][0]["content"]
         _send_whatsapp_message(
@@ -97,14 +96,29 @@ def _get_language():
 
 def _send_input_to_lex2(boto3_client, session_id, text):
     LOCALE_ID = _get_language()
-    # TODO handle both text and audio
-    return boto3_client.recognize_text(
+    # TODO handle both text and audio recognize_utterance
+    response = boto3_client.recognize_text(
         botId=settings.LEX2_BOT_ID,
         botAliasId=settings.LEX2_BOT_ALIAS_ID,
         localeId=LOCALE_ID,
         sessionId=session_id,
         text=text,
     )
+
+    # TODO
+    # response = boto3_client.recognize_utterance(
+    #     botId=settings.LEX2_BOT_ID,
+    #     botAliasId=settings.LEX2_BOT_ALIAS_ID,
+    #     localeId=LOCALE_ID,
+    #     sessionId=session_id,
+    #     #sessionState='string',
+    #     #requestAttributes='string',
+    #     #requestContentType='string', # REQUIRED
+    #     #responseContentType='string',
+    #     #inputStream=b'bytes'|file
+    # )
+
+    return response
 
 
 def _get_input_type(form_data):
