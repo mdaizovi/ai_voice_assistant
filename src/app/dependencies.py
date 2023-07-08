@@ -1,6 +1,6 @@
-import openai
 from twilio.rest import Client as TwilioClient
 import boto3
+import logging
 
 from settings import settings
 
@@ -8,17 +8,18 @@ from settings import settings
 async def get_twilio_client() -> TwilioClient:
     account_sid = settings.TWILIO_ACCOUNT_SID
     auth_token = settings.TWILIO_AUTH_TOKEN
-    return TwilioClient(account_sid, auth_token)
-
-
-async def get_openai() -> openai:
-    openai.api_key = settings.OPENAI_API_KEY
-    return openai
+    client = TwilioClient(account_sid, auth_token)
+    # Logging happens here automaticlly, to make it shut up do
+    logging.basicConfig()
+    client.http_client.logger.setLevel(logging.WARNING)
+    # DEBUG INFO WARNING ERROR CRITICAL
+    return client
 
 
 async def get_lex_client():
-    # do I need aws_access_key_id and aws_secret_access_key ?
-    # yes, this only works loclaly bc
-    # INFO:botocore.credentials:Found credentials in shared credentials file: ~/.aws/credentials
+    """
+    Will work locally if you have  ~/.aws/credentials configured.
+    Else you'll need to provide aws_access_key_id and aws_secret_access_key
+    """
     client = boto3.client("lexv2-runtime", region_name="eu-central-1")
     return client

@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     AUDIO_IN_DIR = os.path.join(this_file_dir, "data", "input")
     AUDIO_OUT_DIR = os.path.join(this_file_dir, "data", "output")
 
-    OPENAI_API_KEY = config("OPENAI_API_KEY")
     TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN")
     TWILIO_NUMBER = config("TWILIO_NUMBER")

@@ -10,7 +10,6 @@ packages = [{include = "ai_voice_assistant"}]
 python = "^3.9"
 fastapi = "^0.99.1"
 uvicorn = "^0.22.0"
-openai = "^0.27.8"
 twilio = "^8.4.0"
 python-decouple = "^3.8"
 python-multipart = "^0.0.6"
