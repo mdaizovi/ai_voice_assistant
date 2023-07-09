@@ -1,9 +1,10 @@
 import logging
 import os
 import requests
-import contextlib
+
 import urllib.request
 import re
+import wave
 from pydub import AudioSegment
 import random
 import string
@@ -44,9 +45,7 @@ def convert_audio_to_pcm(
     return new_path
 
 
-def convert_audio_from_local_file(
-    audio_filepath, to_extension="mp3"
-):
+def convert_audio_from_local_file(audio_filepath, to_extension="mp3"):
     media_filename, __ = _parse_filename_and_extension_from_full_path(audio_filepath)
     output_filename = f"{settings.AUDIO_DIR}{SEP}{media_filename}.{to_extension}"
     AudioSegment.from_wav(audio_filepath).export(output_filename, format=to_extension)
@@ -61,7 +60,6 @@ def _parse_filename_and_extension_from_full_path(full_path):
     else:
         filename = full_path.partition(f".{extension}")[0]
     return filename, extension
-
 
 
 def random_string(length=25):

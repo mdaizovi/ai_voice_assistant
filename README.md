@@ -1,5 +1,10 @@
 # AWS Lex Whatsapp Voice BFF
-whatsapp voice message -> twillio -> EP -> AWS Lex  
+whatsapp voice message -> twillio -> EP -> AWS Lex 
+
+
+# CURRENT STATUS
+95% done but i can't get the damn but to understand the audio. It sends me the same question back. so annoying, it recognizes I'm sending audio, it responds in audio, but it's the question i just answered, not the nxt question. I"m dying I don't now what's wrong and it's driving me up the wall. 
+
 
 ## Why?
 The reason for this chain is that the Lex-> Twillio -> Whatsapp integration doesn't support audio messages out-of-the box. If you set up a Whatsapp conversation between you and your twillio number/Lex bot, and you send it an audio message, you will get "Input message cannot be empty". If you set up an AWS lambda, it won't even be triggered. I don't know exactly where the chain breaks, but it breaks somewhere.
@@ -20,3 +25,4 @@ For this project I made a Lex V2 bot using the AWS ui following [this tutorial](
 ## Resources:
  - [Youtube Lex how to](https://www.youtube.com/watch?v=RB8yw2nzA2Q&list=PLAMHV77MSKJ7s4jE7F_k_Od8qZlFGf1BY&index=1&ab_channel=PradipNichite)
  - [How to Build an AI Voice Assistant on WhatsApp with Python, Whisper API, ChatGPT API, and Twilio](https://www.twilio.com/blog/build-ai-voice-assistant-whatsapp-python-whisper-chatgpt-twilio)
+ - [Getting started with AWS Lex using a datafile and AWS Python SDK](https://towardsaws.com/getting-started-with-aws-lex-using-a-datafile-and-aws-python-sdk-64517fd751b7) for if you want to make another v2 bot and terraofrm isn't supported yet
