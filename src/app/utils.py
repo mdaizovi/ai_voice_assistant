@@ -30,17 +30,11 @@ def convert_audio_from_url(audio_url, from_extension="ogg", to_extension="mp3"):
 def convert_audio_from_local_file(
     audio_filepath, from_extension="wav", to_extension="mp3"
 ):
-    input_filename = f"{settings.AUDIO_IN_DIR}{SEP}{audio_filepath}"
-    print(f"input_filenam is {input_filename}")
-    print(f"converting {audio_filepath}")
-    result = re.search("{SEP}(.*).{from_extension}", audio_filepath)
+    result = re.search(f".*\{SEP}(.*).{from_extension}", audio_filepath)
     if result is not None:
         media_filename = result.group(1)
     else:
         media_filename = audio_filepath.partition(f".{from_extension}")[0]
-    print(f"filename is {media_filename}")
     output_filename = f"{settings.AUDIO_OUT_DIR}{SEP}{media_filename}.{to_extension}"
-    print(f"output_filename is {output_filename}")
-
-    AudioSegment.from_wav(input_filename).export(output_filename, format=to_extension)
+    AudioSegment.from_wav(audio_filepath).export(output_filename, format=to_extension)
     return f"{media_filename}.{to_extension}"
