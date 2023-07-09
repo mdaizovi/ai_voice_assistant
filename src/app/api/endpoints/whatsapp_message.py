@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 import wave
 from pydub import AudioSegment
 from fastapi import APIRouter, Request, Depends
@@ -52,11 +53,17 @@ async def whatsapp_message(
     elif input_type == WhatsappInputType.AUDIO:
         print("input type is audio")
         audio_stream = lex_response["audioStream"].read()
-        # lex_response['audioStream'].close()
+        #lex_response['audioStream'].close()
+        lex_data = {**lex_response}
+        del lex_data["audioStream"]
+        print("lex data")
+        pprint_dict(lex_data)
+        #del lex_data["audioStream"]
+
         media_path = _download_lex_audio_stream_to_filepath(audio_stream)
 
         media_filename = convert_audio_from_local_file(
-            audio_filepath=media_path, from_extension="wav", to_extension="mp3"
+            audio_filepath=media_path, to_extension="mp3"
         )
         media_url = f"{settings.HOST_URL}/static/{media_filename}"
         _send_whatsapp_message(
@@ -121,33 +128,48 @@ def _send_input_to_lex2(boto3_client, form_data, input_type):
         return boto3_client.recognize_text(**lex_kwargs)
     elif input_type == WhatsappInputType.AUDIO:
         # TODO remember to delete audio file after
+
+
+        media_url = form_data["MediaUrl0"]
+        mp3_file_path = convert_audio_from_url(audio_url=media_url)
+        with open(mp3_file_path, "rb") as audio_file:
+            lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
+            lex_kwargs["responseContentType"] = "audio/pcm"
+            lex_kwargs["inputStream"] = audio_file
+            return boto3_client.recognize_utterance(**lex_kwargs)
+
+
+
+
         media_url = form_data["MediaUrl0"]
         media_file_path = download_audio_from_url(
             audio_url=media_url, from_extension="ogg"
         )
-        converted_audio_filepath = convert_audio_to_pcm(audio_filepath=media_file_path)
+        #converted_audio_filepath = convert_audio_to_pcm(audio_filepath=media_file_path)
+        converted_audio_filepath = convert_audio_from_url(audio_url=media_url , to_extension="mp3")
 
-        # TODO CURRENT THEORY:
-        # Lex does't understand the audio i'm sending, so it's seding the
-        # clarificationPrompt
-        # ie asking the same questin again
-        # maybe I'm sending a bad recording
+        lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
+        #lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
+        #lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
 
-        with open(converted_audio_filepath, "rb") as audio_file:
-            lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
-            # other options:
-            # lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
-            # lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
-            lex_kwargs["responseContentType"] = "audio/pcm"
-            # other options:
-            # lex_kwargs["responseContentType"] = "audio/mpeg"
-            # lex_kwargs["responseContentType"] = "audio/ogg"
-            # lex_kwargs["responseContentType"] = "audio/pcm"  #(16 KHz)
-            # lex_kwargs["responseContentType"] = "audio/pcm (16 KHz)" # i think this is wrong
-            # lex_kwargs["responseContentType"] = "audio/*" # (defaults to mpeg)
-
-            lex_kwargs["inputStream"] = audio_file
+        lex_kwargs["responseContentType"] = "audio/pcm"
+        #lex_kwargs["responseContentType"] ='audio/mpeg'
+        #lex_kwargs["responseContentType"] ='audio/ogg'
+        
+        with open(converted_audio_filepath, 'rb') as audio_file:
+            # inputStream=b'bytes'|file
+            file = audio_file.read()
+            lex_kwargs["inputStream"] = bytes(file)
             return boto3_client.recognize_utterance(**lex_kwargs)
+        
+        
+        # with open(converted_audio_filepath, "rb") as audio_file:
+        #     print(f"what type is audio_file {audio_file}")
+        #     lex_kwargs["inputStream"] = audio_file
+        #     return boto3_client.recognize_utterance(**lex_kwargs)
+
+
+
 
 
 def _build_session_from_whatsapp_from_value(from_value):
@@ -166,3 +188,9 @@ def _get_input_type(form_data):
 def _get_language():
     # TODO get it from user input
     return "en_US"
+
+
+def pprint_dict(your_dict):
+    # parsed = json.loads(your_dict)
+    # print(json.dumps(parsed, indent=4))
+    print(json.dumps(your_dict, indent=4))   

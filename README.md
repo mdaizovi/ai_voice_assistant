@@ -13,6 +13,10 @@ I started with [this tutorial](https://www.twilio.com/blog/build-ai-voice-assist
 
 For this project I made a Lex V2 bot using the AWS ui following [this tutorial](https://www.youtube.com/watch?v=RB8yw2nzA2Q&list=PLAMHV77MSKJ7s4jE7F_k_Od8qZlFGf1BY&index=1&ab_channel=PradipNichite), but [here](https://github.com/jzbruno/terraform-aws-lex-examples) is a great repo with examples of how to use terraform to set up a V1 bot. I am not using terraform because it does not support Lex V2.
 
+## Requirements:
+ - python 
+ - you might need `ffmpeg` and `libav`, I'm not sure. It seems like maybe pcm conversion didn't work until I installed them.
+
 ## Resources:
  - [Youtube Lex how to](https://www.youtube.com/watch?v=RB8yw2nzA2Q&list=PLAMHV77MSKJ7s4jE7F_k_Od8qZlFGf1BY&index=1&ab_channel=PradipNichite)
  - [How to Build an AI Voice Assistant on WhatsApp with Python, Whisper API, ChatGPT API, and Twilio](https://www.twilio.com/blog/build-ai-voice-assistant-whatsapp-python-whisper-chatgpt-twilio)

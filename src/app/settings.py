@@ -6,9 +6,6 @@ from pydantic import BaseSettings
 class Settings(BaseSettings):
     full_path = os.path.realpath(__file__)
     this_file_dir = os.path.dirname(full_path)
-    # AUDIO_IN_DIR = os.path.join(this_file_dir, "data", "input")
-    # AUDIO_OUT_DIR = os.path.join(this_file_dir, "data", "output")
-
     AUDIO_DIR = os.path.join(this_file_dir, "data")
 
     # TODO Don't forget ot make an .env file with these variables
