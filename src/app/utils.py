@@ -4,7 +4,8 @@ import requests
 import urllib.request
 import re
 from pydub import AudioSegment
-
+import random
+import string
 from settings import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -38,3 +39,10 @@ def convert_audio_from_local_file(
     output_filename = f"{settings.AUDIO_OUT_DIR}{SEP}{media_filename}.{to_extension}"
     AudioSegment.from_wav(audio_filepath).export(output_filename, format=to_extension)
     return f"{media_filename}.{to_extension}"
+
+
+def random_string(length=25):
+    pool = string.ascii_lowercase + string.ascii_uppercase
+    return "".join(
+        (random.choice(pool) for x in range(length))
+    )  # run loop until the define length
