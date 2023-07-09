@@ -16,5 +16,7 @@ class Settings(BaseSettings):
     LEX2_BOT_ID = config("LEX2_BOT_ID")
     LEX2_BOT_ALIAS_ID = config("LEX2_BOT_ALIAS_ID")
 
+    HOST_URL = "https://9505-62-27-218-107.ngrok-free.app"
+
 
 settings = Settings()

@@ -1,5 +1,7 @@
 import logging
 import json
+import os
+import wave
 from pydub import AudioSegment
 from fastapi import APIRouter, Request, Depends
 
@@ -36,9 +38,8 @@ async def whatsapp_message(
 
     lex_response = _send_input_to_lex2(boto3_client, form_data, input_type)
     if input_type == WhatsappInputType.TEXT:
-        prettified = json.dumps(lex_response, indent=4)
+        #prettified = json.dumps(lex_response, indent=4)
         # print(f"\n\lex_response\n{prettified}\n")
-
         try:
             response_text = lex_response["messages"][0]["content"]
             _send_whatsapp_message(
@@ -52,32 +53,68 @@ async def whatsapp_message(
             pass
     elif input_type == WhatsappInputType.AUDIO:
         print("input type is audio")
-        audio_stream = lex_response["ResponseMetadata"]["audioStream"]
-        media_url = _convert_lex_audio_stream_to_media_url(audio_stream)
+        # audio_stream = lex_response["ResponseMetadata"]["audioStream"]
+        
+        audio_data = {**lex_response}
+        del audio_data["audioStream"]
+        prettified = json.dumps(audio_data, indent=4)
+        print(f"\n\lex_response\n{prettified}\n")
+        
+        
+        audio_stream = lex_response["audioStream"].read()
+        #lex_response['audioStream'].close()
+        print("got audio stream")
+        print(type(audio_stream))
+
+        output_format = "wav"
+        filename = "audiofile"
+        output_file_path = f"{settings.AUDIO_OUT_DIR}/{filename}.{output_format}"
+        
+        f = wave.open(output_file_path, 'wb')
+        f.setnchannels(2)
+        f.setsampwidth(2)
+        f.setframerate(16000) # sounds like a chipmunk
+        #f.setframerate(8000) # acceptable
+        f.setframerate(9000) # acceptable
+        f.setnframes(0)
+
+        f.writeframesraw(audio_stream)
+        f.close()
+        media_path = f"{filename}.{output_format}"
+
+
+
+
+        # media_path = _download_lex_audio_stream_to_filepath(audio_stream)
+        media_url = f"{settings.HOST_URL}/static/{media_path}"
+        print(f"media url is {media_url}")
         _send_whatsapp_message(
             twilio_client=twilio_client,
             to_number=whatsapp_user_number,
             media_url=media_url,
         )
+        print(f"media path is {media_path}")
+        if os.path.isfile(media_path):
+            print(f"deleting {media_path}")
+            # os.remove(media_path)
+        else:
+            print("not a file")
 
     return
 
 
-def _convert_lex_audio_stream_to_media_url(audio_stream):
-    # TODO make this work, receive file and download and serve it somewhre, return url
-    pass
-    # audio_bytes = audio_stream.read()
-    # audio_segment = AudioSegment.from_file_using_temporary_files(audio_bytes)
-    # output_file_path = 'output.wav'
-    # output_format = 'wav'
-    # audio_segment.export(output_file_path, format=output_format)
-    # try:
-    #     prettified = json.dumps(lex_response, indent=4)
-    #     print(f"\n\nlex_response\n{prettified}\n")
-    # except:
-    #     print(type(lex_response))
-    #     print(lex_response)
-
+def _download_lex_audio_stream_to_filepath(audio_stream):
+    # 'content-type': 'audio/pcm',
+    # has example of lex response: https://stackoverflow.com/questions/34570226/how-to-use-botocore-response-streamingbody-as-stdin-pipe
+    audio_bytes = audio_stream.read()
+    audio_stream.close()
+    audio_segment = AudioSegment.from_file_using_temporary_files(audio_bytes)
+    output_format = 'mp3'
+    #TODO filename from audio_stream ?
+    filename = "audiofile"
+    output_file_path = f"{settings.AUDIO_OUT_DIR}/{filename}.{output_format}"
+    audio_segment.export(output_file_path, format=output_format)
+    return f"{filename}.{output_format}"
 
 def _send_whatsapp_message(twilio_client, to_number, body_text=None, media_url=None):
     twilio_number = settings.TWILIO_NUMBER
@@ -90,10 +127,7 @@ def _send_whatsapp_message(twilio_client, to_number, body_text=None, media_url=N
         twilio_kwargs["body"] = body_text
     elif all([body_text is None, media_url is not None]):
         message_type = "audio"
-        twilio_kwargs["media_url"] = [
-            "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3"
-        ]
-        # twilio_kwargs["media_url"] = [media_url]
+        twilio_kwargs["media_url"] = [media_url]
     try:
         twilio_client.messages.create(**twilio_kwargs)
     except Exception as e:
