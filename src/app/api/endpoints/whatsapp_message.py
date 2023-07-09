@@ -7,7 +7,13 @@ from fastapi import APIRouter, Request, Depends
 from twilio.rest import Client as TwilioClient
 
 # Internal imports
-from utils import convert_audio_from_url, convert_audio_from_local_file, random_string
+from utils import (
+    convert_audio_from_url,
+    download_audio_from_url,
+    convert_audio_from_local_file,
+    random_string,
+    convert_audio_to_pcm,
+)
 from settings import settings
 
 from dependencies import get_twilio_client, get_lex_client
@@ -58,8 +64,8 @@ async def whatsapp_message(
             to_number=whatsapp_user_number,
             media_url=media_url,
         )
-        if os.path.isfile(media_path):
-            os.remove(media_path)
+        # if os.path.isfile(media_path):
+        #     os.remove(media_path)
     return
 
 
@@ -69,7 +75,7 @@ def _download_lex_audio_stream_to_filepath(audio_stream):
 
     output_format = "wav"  # I'm only using wav bc wave library is only thing i got to work with saving lex audio. can replace later.
     filename = random_string()
-    output_file_path = f"{settings.AUDIO_IN_DIR}/{filename}.{output_format}"
+    output_file_path = f"{settings.AUDIO_DIR}/{filename}.{output_format}"
 
     f = wave.open(output_file_path, "wb")
     f.setnchannels(1)
@@ -116,10 +122,30 @@ def _send_input_to_lex2(boto3_client, form_data, input_type):
     elif input_type == WhatsappInputType.AUDIO:
         # TODO remember to delete audio file after
         media_url = form_data["MediaUrl0"]
-        mp3_file_path = convert_audio_from_url(audio_url=media_url)
-        with open(mp3_file_path, "rb") as audio_file:
+        media_file_path = download_audio_from_url(
+            audio_url=media_url, from_extension="ogg"
+        )
+        converted_audio_filepath = convert_audio_to_pcm(audio_filepath=media_file_path)
+
+        # TODO CURRENT THEORY:
+        # Lex does't understand the audio i'm sending, so it's seding the
+        # clarificationPrompt
+        # ie asking the same questin again
+        # maybe I'm sending a bad recording
+
+        with open(converted_audio_filepath, "rb") as audio_file:
             lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
+            # other options:
+            # lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
+            # lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
             lex_kwargs["responseContentType"] = "audio/pcm"
+            # other options:
+            # lex_kwargs["responseContentType"] = "audio/mpeg"
+            # lex_kwargs["responseContentType"] = "audio/ogg"
+            # lex_kwargs["responseContentType"] = "audio/pcm"  #(16 KHz)
+            # lex_kwargs["responseContentType"] = "audio/pcm (16 KHz)" # i think this is wrong
+            # lex_kwargs["responseContentType"] = "audio/*" # (defaults to mpeg)
+
             lex_kwargs["inputStream"] = audio_file
             return boto3_client.recognize_utterance(**lex_kwargs)
 
