@@ -10,4 +10,5 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory="data/output"), name="static")
     return app
 
+
 app = create_app()
