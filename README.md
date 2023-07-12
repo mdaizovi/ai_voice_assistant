@@ -3,8 +3,7 @@ whatsapp voice message -> twillio -> EP -> AWS Lex
 
 
 # CURRENT STATUS
-95% done but i can't get the damn but to understand the audio. It sends me the same question back. so annoying, it recognizes I'm sending audio, it responds in audio, but it's the question i just answered, not the nxt question. I"m dying I don't now what's wrong and it's driving me up the wall. 
-
+boto3 recognize_utterance is just fine, the problem is my pcm conversion is bad. ran the same boto code with pcm files i manaully made a different way and the bot responded correctly. Need to fix `convert_audio_to_pcm`, it's wrong.
 
 ## Why?
 The reason for this chain is that the Lex-> Twillio -> Whatsapp integration doesn't support audio messages out-of-the box. If you set up a Whatsapp conversation between you and your twillio number/Lex bot, and you send it an audio message, you will get "Input message cannot be empty". If you set up an AWS lambda, it won't even be triggered. I don't know exactly where the chain breaks, but it breaks somewhere.

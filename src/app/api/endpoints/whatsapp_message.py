@@ -130,43 +130,17 @@ def _send_input_to_lex2(boto3_client, form_data, input_type):
         media_url = form_data["MediaUrl0"]
         # TODO remember to delete audio file after
 
-        ###### this gets me audio from lex, but it's the question I just answered.
-        # in this case I'm sending an mp3.
-        # mp3_file_path = convert_audio_from_url(audio_url=media_url, to_extension="mp3")
-        # lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
-        # #lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
-        # #lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
-
-        # lex_kwargs["responseContentType"] = "audio/pcm"
-        # with open(mp3_file_path, "rb") as audio_file:
-        #     lex_kwargs["inputStream"] = audio_file
-        #     return boto3_client.recognize_utterance(**lex_kwargs)
-        ######
-
         input_filename = download_audio_from_url(media_url)
         converted_audio_filepath = convert_audio_to_pcm(audio_filepath=input_filename)
-        # converted_audio_filepath = convert_audio_from_url(audio_url=media_url, to_extension="mp3")
-        # no matter which of these i use, i always get audio but the previous question back
         lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
         # lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
         # lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
 
         lex_kwargs["responseContentType"] = "audio/pcm"
-        # lex_kwargs["responseContentType"] ='audio/mpeg'
-        # lex_kwargs["responseContentType"] ='audio/ogg'
 
         with open(converted_audio_filepath, "rb") as audio_file:
             lex_kwargs["inputStream"] = audio_file
             return boto3_client.recognize_utterance(**lex_kwargs)
-
-        # NOTE if i send it bytes(file) i get text back
-        # if i send audio_file.read() i get text back
-        # If i don't read() and then send bytes I get: 'bytes' object cannot be interpreted as an integer
-        # with open(converted_audio_filepath, 'rb') as audio_file:
-        #     # inputStream=b'bytes'|file
-        #     file = audio_file.read()
-        #     lex_kwargs["inputStream"] = file
-        #     return boto3_client.recognize_utterance(**lex_kwargs)
 
 
 def _build_session_from_whatsapp_from_value(from_value):
