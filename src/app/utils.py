@@ -40,8 +40,12 @@ def convert_audio_to_pcm(
 ):
     media_filename, __ = _parse_filename_and_extension_from_full_path(audio_filepath)
     new_path = f"{settings.AUDIO_DIR}{SEP}{media_filename}.{to_extension}"
-    sound = AudioSegment.from_file(audio_filepath, format=format)
-    sound.export(new_path, format=format)
+    # This creates a pcm file that audacity recognizes, but when i send it to aws it thinks it's text
+    audio_file = AudioSegment.from_file(audio_filepath)
+    pcm_audio = audio_file.set_frame_rate(44100).set_sample_width(2).set_channels(1)
+    # pcm_audio.export(new_path, format=format, bitrate=bitrate)
+    # Raw works for "book hotel" but that's it
+    pcm_audio.export(out_f=new_path, format="raw")
     return new_path
 
 

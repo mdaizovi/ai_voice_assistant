@@ -38,6 +38,7 @@ async def whatsapp_message(
     whatsapp_user_number = form_data["From"].split("whatsapp:")[-1]
 
     lex_response = _send_input_to_lex2(boto3_client, form_data, input_type)
+
     if input_type == WhatsappInputType.TEXT:
         try:
             response_text = lex_response["messages"][0]["content"]
@@ -51,46 +52,37 @@ async def whatsapp_message(
             # maybe if we add a finsihed message won't get KeyError?
             pass
     elif input_type == WhatsappInputType.AUDIO:
-        print("input type is audio")
         audio_stream = lex_response["audioStream"].read()
-        # lex_response['audioStream'].close()
         lex_data = {**lex_response}
         del lex_data["audioStream"]
-        print("lex data")
         pprint_dict(lex_data)
-        # del lex_data["audioStream"]
 
-        media_path = _download_lex_audio_stream_to_filepath(audio_stream)
+        media_path_wav = _download_lex_audio_stream_to_filepath(audio_stream)
+        # deleve the wav after convert to mp3
+        _delete_file(media_path_wav)
 
-        media_filename = convert_audio_from_local_file(
-            audio_filepath=media_path, to_extension="mp3"
+        media_filename_mp3 = convert_audio_from_local_file(
+            audio_filepath=media_path_wav, to_extension="mp3"
         )
-        media_url = f"{settings.HOST_URL}/static/{media_filename}"
+        media_url = f"{settings.HOST_URL}/static/{media_filename_mp3}"
         _send_whatsapp_message(
             twilio_client=twilio_client,
             to_number=whatsapp_user_number,
             media_url=media_url,
         )
-        # if os.path.isfile(media_path):
-        #     os.remove(media_path)
     return
 
 
 def _download_lex_audio_stream_to_filepath(audio_stream):
-    # 'content-type': 'audio/pcm',
-    # has example of lex response: https://stackoverflow.com/questions/34570226/how-to-use-botocore-response-streamingbody-as-stdin-pipe
-
     output_format = "wav"  # I'm only using wav bc wave library is only thing i got to work with saving lex audio. can replace later.
     filename = random_string()
     output_file_path = f"{settings.AUDIO_DIR}/{filename}.{output_format}"
-
     f = wave.open(output_file_path, "wb")
     f.setnchannels(1)
     f.setsampwidth(2)
     f.setframerate(16000)
     f.writeframesraw(audio_stream)
     f.close()
-
     return output_file_path
 
 
@@ -135,12 +127,17 @@ def _send_input_to_lex2(boto3_client, form_data, input_type):
         lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
         # lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
         # lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
-
         lex_kwargs["responseContentType"] = "audio/pcm"
 
         with open(converted_audio_filepath, "rb") as audio_file:
             lex_kwargs["inputStream"] = audio_file
-            return boto3_client.recognize_utterance(**lex_kwargs)
+            lex_response = boto3_client.recognize_utterance(**lex_kwargs)
+
+        # Delete both ogg and pcm after I'm done with them
+        _delete_file(input_filename)
+        _delete_file(converted_audio_filepath)
+
+        return lex_response
 
 
 def _build_session_from_whatsapp_from_value(from_value):
@@ -159,6 +156,11 @@ def _get_input_type(form_data):
 def _get_language():
     # TODO get it from user input
     return "en_US"
+
+
+def _delete_file(media_path):
+    if os.path.isfile(media_path):
+        os.remove(media_path)
 
 
 def pprint_dict(your_dict):
