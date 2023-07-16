@@ -1,13 +1,6 @@
 # AWS Lex Whatsapp Voice BFF
 whatsapp voice message -> twillio -> EP -> AWS Lex 
 
-
-# CURRENT STATUS
-boto3 recognize_utterance is just fine, the problem seemed ot be that my pcm conversion was bad. 
-EXCEPT that audacity can open it. 
-Right now Lex recognizes "book hotel" but then none of the subsequent utterances, for some reason.
-
-
 ## Why?
 The reason for this chain is that the Lex-> Twillio -> Whatsapp integration doesn't support audio messages out-of-the box. If you set up a Whatsapp conversation between you and your twillio number/Lex bot, and you send it an audio message, you will get "Input message cannot be empty". If you set up an AWS lambda, it won't even be triggered. I don't know exactly where the chain breaks, but it breaks somewhere.
 

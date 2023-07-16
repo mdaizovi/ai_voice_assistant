@@ -33,11 +33,11 @@ async def whatsapp_message(
     boto3_client=Depends(get_lex_client),
 ):
     # https://stackoverflow.com/questions/61872923/supporting-both-form-and-json-encoded-bodys-with-fastapi
-    form_data = {**await request.form()}
-    input_type = _get_input_type(form_data=form_data)
-    whatsapp_user_number = form_data["From"].split("whatsapp:")[-1]
+    whatsapp_form_data = {**await request.form()}
+    input_type = _get_input_type(form_data=whatsapp_form_data)
+    whatsapp_user_number = whatsapp_form_data["From"].split("whatsapp:")[-1]
 
-    lex_response = _send_input_to_lex2(boto3_client, form_data, input_type)
+    lex_response = _send_input_to_lex2(boto3_client, whatsapp_form_data, input_type)
 
     if input_type == WhatsappInputType.TEXT:
         try:
@@ -49,17 +49,17 @@ async def whatsapp_message(
             )
         except KeyError:
             # This is when Lex doesn't send messages bc it's done.
-            # maybe if we add a finsihed message won't get KeyError?
+            # maybe if we add a finished message won't get KeyError?
             pass
     elif input_type == WhatsappInputType.AUDIO:
         audio_stream = lex_response["audioStream"].read()
         lex_data = {**lex_response}
         del lex_data["audioStream"]
-        pprint_dict(lex_data)
+        pprint_dict(lex_data["contentType"])
 
         media_path_wav = _download_lex_audio_stream_to_filepath(audio_stream)
-        # deleve the wav after convert to mp3
-        _delete_file(media_path_wav)
+        # delete the wav after convert to mp3
+        #_delete_file(media_path_wav)
 
         media_filename_mp3 = convert_audio_from_local_file(
             audio_filepath=media_path_wav, to_extension="mp3"
@@ -122,20 +122,23 @@ def _send_input_to_lex2(boto3_client, form_data, input_type):
         media_url = form_data["MediaUrl0"]
         # TODO remember to delete audio file after
 
+        # first download the whhatsapp audio from the url in the form; it will be in ogg format
         input_filename = download_audio_from_url(media_url)
+        # next convery it to pcm beore sending to Lex
         converted_audio_filepath = convert_audio_to_pcm(audio_filepath=input_filename)
-        lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
+        lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"        
         # lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
         # lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
         lex_kwargs["responseContentType"] = "audio/pcm"
+        #lex_kwargs["responseContentType"] = "audio/*"
 
         with open(converted_audio_filepath, "rb") as audio_file:
             lex_kwargs["inputStream"] = audio_file
             lex_response = boto3_client.recognize_utterance(**lex_kwargs)
 
         # Delete both ogg and pcm after I'm done with them
-        _delete_file(input_filename)
-        _delete_file(converted_audio_filepath)
+        #_delete_file(input_filename)
+        #_delete_file(converted_audio_filepath)
 
         return lex_response
 
@@ -164,6 +167,4 @@ def _delete_file(media_path):
 
 
 def pprint_dict(your_dict):
-    # parsed = json.loads(your_dict)
-    # print(json.dumps(parsed, indent=4))
     print(json.dumps(your_dict, indent=4))
