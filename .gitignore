@@ -6,12 +6,8 @@
 
 # Specific files #
 #################
-db.sqlite
-db.sqlite3
 .idea/
 .env
-.env.pytest
-.env.backup
 .session
 /venv
 src/app/data/

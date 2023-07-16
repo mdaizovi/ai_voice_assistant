@@ -8,7 +8,6 @@ class Settings(BaseSettings):
     this_file_dir = os.path.dirname(full_path)
     AUDIO_DIR = os.path.join(this_file_dir, "data")
 
-    # TODO Don't forget ot make an .env file with these variables
     TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN")
     TWILIO_NUMBER = config("TWILIO_NUMBER")

@@ -55,8 +55,8 @@ def convert_audio_from_local_file(audio_filepath, to_extension="mp3"):
     return f"{media_filename}.{to_extension}"
 
 
-def download_lex_audio_stream_to_filepath(audio_stream):
-    to_extension = "wav"  # I'm only using wav bc wave library is only thing i got to work with saving lex audio. can replace later.
+def download_lex_audio_stream_to_filepath(audio_stream, to_extension="wav"):
+    # I'm only using wav bc wave library is only thing i got to work with saving lex audio. can replace later.
     media_filename = random_string()
     output_file_path = build_path_to_media_dir(
         filename=f"{media_filename}.{to_extension}"

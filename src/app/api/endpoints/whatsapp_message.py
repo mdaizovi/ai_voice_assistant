@@ -12,6 +12,7 @@ from utils import (
     download_lex_audio_stream_to_filepath,
     delete_file,
     convert_audio_to_pcm,
+    build_path_to_media_dir
 )
 from settings import settings
 
@@ -51,15 +52,11 @@ async def whatsapp_message(
             pass
     elif input_type == WhatsappInputType.AUDIO:
         audio_stream = lex_response["audioStream"].read()
-        lex_data = {**lex_response}
-        del lex_data["audioStream"]
-        pprint_dict(lex_data["contentType"])
-
         lex_audio_stream_path_wav = download_lex_audio_stream_to_filepath(audio_stream)
-        lex_audio_stream_filename_mp3 = convert_audio_from_local_file(
+        lex_audio_response_filename = convert_audio_from_local_file(
             audio_filepath=lex_audio_stream_path_wav, to_extension="mp3"
         )
-        media_url = f"{settings.HOST_URL}/static/{lex_audio_stream_filename_mp3}"
+        media_url = f"{settings.HOST_URL}/static/{lex_audio_response_filename}"
         _send_whatsapp_message(
             twilio_client=twilio_client,
             to_number=whatsapp_user_number,
