@@ -1,18 +1,16 @@
 import logging
-import os
 import json
-import wave
-from pydub import AudioSegment
+
 from fastapi import APIRouter, Request, Depends
 
 from twilio.rest import Client as TwilioClient
 
 # Internal imports
 from utils import (
-    convert_audio_from_url,
     download_audio_from_url,
     convert_audio_from_local_file,
-    random_string,
+    download_lex_audio_stream_to_filepath,
+    delete_file,
     convert_audio_to_pcm,
 )
 from settings import settings
@@ -57,33 +55,24 @@ async def whatsapp_message(
         del lex_data["audioStream"]
         pprint_dict(lex_data["contentType"])
 
-        media_path_wav = _download_lex_audio_stream_to_filepath(audio_stream)
-        # delete the wav after convert to mp3
-        #_delete_file(media_path_wav)
-
-        media_filename_mp3 = convert_audio_from_local_file(
-            audio_filepath=media_path_wav, to_extension="mp3"
+        lex_audio_stream_path_wav = download_lex_audio_stream_to_filepath(audio_stream)
+        lex_audio_stream_filename_mp3 = convert_audio_from_local_file(
+            audio_filepath=lex_audio_stream_path_wav, to_extension="mp3"
         )
-        media_url = f"{settings.HOST_URL}/static/{media_filename_mp3}"
+        media_url = f"{settings.HOST_URL}/static/{lex_audio_stream_filename_mp3}"
         _send_whatsapp_message(
             twilio_client=twilio_client,
             to_number=whatsapp_user_number,
             media_url=media_url,
         )
+        # Cleanup. Delete the wav after convert to mp3
+        delete_file(lex_audio_stream_path_wav)
+        # After the user plays media_filename_mp3 you can delete it, I guess they get it from whatsapp at that point.
+        # or maybe it's saved locally after they download it.
+        # But you can't delete here, you'll get a 404 when they try to get file.
+        # TODO write a cron task or something.
+
     return
-
-
-def _download_lex_audio_stream_to_filepath(audio_stream):
-    output_format = "wav"  # I'm only using wav bc wave library is only thing i got to work with saving lex audio. can replace later.
-    filename = random_string()
-    output_file_path = f"{settings.AUDIO_DIR}/{filename}.{output_format}"
-    f = wave.open(output_file_path, "wb")
-    f.setnchannels(1)
-    f.setsampwidth(2)
-    f.setframerate(16000)
-    f.writeframesraw(audio_stream)
-    f.close()
-    return output_file_path
 
 
 def _send_whatsapp_message(twilio_client, to_number, body_text=None, media_url=None):
@@ -120,25 +109,20 @@ def _send_input_to_lex2(boto3_client, form_data, input_type):
         return boto3_client.recognize_text(**lex_kwargs)
     elif input_type == WhatsappInputType.AUDIO:
         media_url = form_data["MediaUrl0"]
-        # TODO remember to delete audio file after
 
         # first download the whhatsapp audio from the url in the form; it will be in ogg format
         input_filename = download_audio_from_url(media_url)
         # next convery it to pcm beore sending to Lex
         converted_audio_filepath = convert_audio_to_pcm(audio_filepath=input_filename)
-        lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"        
-        # lex_kwargs["requestContentType"] = "audio/x-l16; sample-rate=16000; channel-count=1"
-        # lex_kwargs["requestContentType"] = "audio/lpcm; sample-rate=8000; sample-size-bits=16; channel-count=1; is-big-endian=false"
+        lex_kwargs["requestContentType"] = "audio/l16; rate=16000; channels=1"
         lex_kwargs["responseContentType"] = "audio/pcm"
-        #lex_kwargs["responseContentType"] = "audio/*"
-
         with open(converted_audio_filepath, "rb") as audio_file:
             lex_kwargs["inputStream"] = audio_file
             lex_response = boto3_client.recognize_utterance(**lex_kwargs)
 
-        # Delete both ogg and pcm after I'm done with them
-        #_delete_file(input_filename)
-        #_delete_file(converted_audio_filepath)
+        # Cleanup. Delete both ogg and pcm after I'm done with them
+        delete_file(input_filename)
+        delete_file(converted_audio_filepath)
 
         return lex_response
 
@@ -159,11 +143,6 @@ def _get_input_type(form_data):
 def _get_language():
     # TODO get it from user input
     return "en_US"
-
-
-def _delete_file(media_path):
-    if os.path.isfile(media_path):
-        os.remove(media_path)
 
 
 def pprint_dict(your_dict):
